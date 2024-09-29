@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>$SABU Stake Service</title>
+    <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js/dist/web3.min.js"></script>
+    <script type="text/javascript" src="js/main.js"></script>
+    <script type="text/javascript" src="blockchain/erc20.js"></script>
+    <script type="text/javascript" src="blockchain/smartcontract.js"></script>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="navbar">
+                <h1>$SABU Stake Service</h1>
+                <div class="navbar-right">
+                    <button class="btn-paltadd" onclick="TokenAdd()">SABU Game Token 메타마스크 추가</button>
+                    <button class="btn-connect-wallet" onclick="connectWallet()">지갑 연결</button>
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <p id="walletAddress">연결된 지갑 주소: -</p>
+            <p id="walletBalance">이더리움 잔액: -</p>
+
+            <!-- Dashboard Section -->
+            <section class="dashboard">
+                <div class="dashboard-header">
+                    <p style="font-size: 20px; font-weight: 1000;">공지 사항</p>
+                    <p>1. 연간 20% 보상 체계로 1분 단위로 보상 지급</p>
+                    <p>2. 받은 보상은 추가되지 않음 = 디파짓된 금액만 보상받음</p>
+                    <br><br>
+                    <p style="font-size: 20px; font-weight: 1000;">업데이트 필요</p>
+                    <p style="color: red;">** 출시 목적이 아닌 스테이킹 보상에 대한 테스트이기 때문에 출시 하기 위해선 아래의 업데이트가 필요함 **</p>
+                    <p>1. 메타마스크와 트러스트월렛 동시에 설치된 브라우저는 지갑 연결 오류남. 고로 지갑 하나만 사용하길 -> provider로 지갑 분리 업데이트</p>
+                    <p>2. NFT도 토큰 스테이킹 보상을 받을 수 있게 IERC721을 추가하여 업데이트</p>
+                    <p>3. 현재 보상률은 20%로 고정되어 있지만, 하루 최대 보상 개수를 정해서 그 안의 사용자들끼리 한정된 개수만 지분량으로 나누게끔 업데이트 </p>
+                    <p>4. 현재 pool에 들어간 보상이 모두 고갈되면 환전 트랜잭션이 실패함. 고로 contract에서 20%가 아닌 3번을 정한 뒤 고갈 문제 함께 업데이트 </p>
+                    <br><br>
+                    <p style="font-size: 20px; font-weight: 1000;">사용방법</p>
+                    <p>SABU 토큰 보유 -> SABU Game Token 메타마스크 추가 -> 지갑 연결 -> 디파짓 수량 입력 -> 
+                        approve & transferfrom 2번 트랜잭션으로 디파짓 실행 -> 자동 보상 -> 환전</p>
+                    <br><br>
+                    <h2>DASHBOARD</h2>
+                </div>
+                <div class="dashboard-stats">
+                    <div class="stat-box">
+                        <span class="stat-title">TOTAL DEPOSITED</span>
+                        <span class="stat-value" id="totalDeposited">0 $SABU</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-title">REWARDS RECEIVED</span>
+                        <span class="stat-value" id="rewardsReceived">0 $SABU</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pools Section -->
+            <section class="pools">
+                <h3>POOLS</h3>
+                <div class="pool-card">
+                    <div class="pool-asset">
+                        <img src="/img/7482.jpg" alt="SABU Logo">
+                        <div class="pool-asset-details">
+                            <span class="asset-name">SABU Game Token</span>
+                        </div>
+                    </div>
+
+                    <!-- Pool Actions -->
+                    <div class="pool-actions">
+                        <div class="action-box">
+                            <h4>DEPOSIT</h4>
+                            <p>Wallet Balance: <span id="tokenBalance">- $SABU</span></p>
+                            <div class="input-max-container">
+                                <input type="text" placeholder="amount" id="depositAmount">
+                                <button class="btn-max" onclick="setMaxDeposit()">MAX</button>
+                            </div>
+                            <button class="btn-action" onclick="depositTokens()">DEPOSIT</button>
+                        </div>
+
+                        <div class="action-box">
+                            <h4>CLAIM REWARDS</h4>
+                            <p style="color: red;">24시간 예상 보상: <span id="estimatedRewards">- </span> $SABU</p>
+                            <p>Unclaimed Balance: <span id="unclaimedRewards">- $SABU</span></p>
+                            <button class="btn-action" onclick="claimRewards()">CLAIM</button>
+                        </div>
+
+                        <div class="action-box">
+                            <h4>WITHDRAW</h4>
+                            <p>Deposited Balance: <span id="depositedBalance">- $SABU</span></p>
+                            <div class="input-max-container">
+                                <input type="text" placeholder="amount" id="withdrawAmount">
+                            </div>
+                            <button class="btn-action" onclick="withdrawTokens()">WITHDRAW</button>
+                            <button class="btn-action-secondary" onclick="withdrawAllTokens()">WITHDRAW ALL</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <section class="admin-panel">
+            <h3>Admin Page로 퍼블릭일땐 따로 관리</h3>
+            <div class="admin-actions">
+                <label for="rewardAmount">관리자용 총 보상 풀 입금 ($SABU):</label>
+                <input type="text" id="rewardAmount" placeholder="amount" />
+
+                <button class="btn-admin" onclick="fundRewardPool()">보상 입금</button>
+            </div>
+            <p id="adminResult"></p>
+            <!-- 관리자가 충전한 전체 보상 개수 -->
+            <div class="admin-info">
+                <p><strong>총 관리자가 입금한 보상:</strong> <span id="totalFundedRewards">0 $SABU</span></p>
+            </div>
+
+            <!-- 사용자가 출금한 전체 보상 개수 -->
+            <div class="admin-info">
+                <p><strong>총 출금된 보상:</strong> <span id="totalClaimedRewards">0 $SABU</span></p>
+            </div>
+
+            <!-- 전체 디파짓된 토큰 개수 -->
+            <div class="admin-info">
+                <p><strong>전체 디파짓된 토큰:</strong> <span id="totalStakedTokens">0 $SABU</span></p>
+            </div>
+
+            <!-- 지급됐지만 출금되지 않은 전체 보상 -->
+            <div class="admin-info">
+                <p><strong>지급됐지만 출금되지 않은 보상:</strong> <span id="totalUnclaimedRewards">0 $SABU</span></p>
+            </div>
+        </section>
+
+        <footer>
+            <p>&copy; 2024 $SABU Stake Service</p>
+        </footer>
+    </div>
+</body>
+
+</html>
